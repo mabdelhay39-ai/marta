@@ -1,13 +1,16 @@
 import {
     controller,
     httpPost,
+    httpPatch,
+    httpGet,
     request,
     response,
 } from 'inversify-express-utils';
 import { inject } from 'inversify';
-import { TYPES, RegisterUserDto } from '../lib';
+import { TYPES, RegisterUserDto, UpdateProfileDto } from '../lib';
 import { UserService } from '../services/user-service';
 import { Request, Response } from 'express';
+import { authMiddleware, AuthRequest } from '../lib/auth-middleware';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 
@@ -17,9 +20,9 @@ export class UserController {
 
     /**
      * Register a new user
-     * POST /users/
+     * POST /users/register
      */
-    @httpPost('/')
+    @httpPost('/register')
     async register(@request() req: Request, @response() res: Response) {
         try {
             // Validate input
@@ -74,6 +77,52 @@ export class UserController {
                     .status(401)
                     .json({ message: 'Invalid email or password' });
             }
+            return res.status(500).json({ message: 'Internal server error' });
+        }
+    }
+
+    /**
+     * Update authenticated user's profile
+     * PATCH /users/profile
+     */
+    @httpPatch('/profile', authMiddleware)
+    async updateProfile(
+        @request() req: AuthRequest,
+        @response() res: Response
+    ) {
+        try {
+            const dto = req.body as UpdateProfileDto;
+            if (!dto.firstName && !dto.lastName) {
+                return res.status(400).json({ message: 'No fields to update' });
+            }
+            const updated = await this.userService.updateProfile(
+                req.user.id,
+                dto
+            );
+            if (!updated) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+            const { password: _, ...userData } = updated;
+            return res.status(200).json(userData);
+        } catch (err) {
+            return res.status(500).json({ message: 'Internal server error' });
+        }
+    }
+
+    /**
+     * Get authenticated user's profile
+     * GET /users/profile
+     */
+    @httpGet('/profile', authMiddleware)
+    async getProfile(@request() req: AuthRequest, @response() res: Response) {
+        try {
+            const user = await this.userService.getProfile(req.user.id);
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' });
+            }
+            const { password: _, ...userData } = user;
+            return res.status(200).json(userData);
+        } catch (err) {
             return res.status(500).json({ message: 'Internal server error' });
         }
     }

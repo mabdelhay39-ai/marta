@@ -7,9 +7,13 @@ import { TYPES } from '../lib/types';
 import { EmailAlreadyInUseError, InvalidCredentialsError } from '../lib/errors';
 import { signJwt } from '../lib/jwt';
 
+import { UpdateProfileDto } from '../lib/user-dtos';
+
 export interface UserService {
     register(input: RegisterUserDto): Promise<User>;
     authenticate(email: string, password: string): Promise<string>;
+    getProfile(userId: string): Promise<User | null>;
+    updateProfile(userId: string, data: UpdateProfileDto): Promise<User | null>;
 }
 
 @injectable()
@@ -19,6 +23,22 @@ export class UserServiceImpl implements UserService {
         @inject(TYPES.PasswordManagerService)
         private passwordManager: PasswordManagerService
     ) {}
+
+    async getProfile(userId: string): Promise<User | null> {
+        return this.userRepository.findById(userId);
+    }
+
+    async updateProfile(
+        userId: string,
+        data: UpdateProfileDto
+    ): Promise<User | null> {
+        // Only allow updating firstName and lastName
+        const updateData: any = {};
+        if (data.firstName) updateData.firstName = data.firstName;
+        if (data.lastName) updateData.lastName = data.lastName;
+        if (Object.keys(updateData).length === 0) return null;
+        return this.userRepository.update(userId, updateData);
+    }
 
     async register(userData: RegisterUserDto): Promise<User> {
         // Check if email already exists

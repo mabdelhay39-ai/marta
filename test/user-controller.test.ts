@@ -39,10 +39,10 @@ describe('UserController Integration', () => {
         }
     });
 
-    describe('POST /users/', () => {
+    describe('POST /users/register', () => {
         it('should register a new user', async () => {
             const res = await request(server)
-                .post('/partner-app/api/users/')
+                .post('/partner-app/api/users/register')
                 .send(userData);
             expect(res.status).toBe(201);
             expect(res.body).toHaveProperty('id');
@@ -52,7 +52,7 @@ describe('UserController Integration', () => {
 
         it('should not register with invalid email', async () => {
             const res = await request(server)
-                .post('/partner-app/api/users/')
+                .post('/partner-app/api/users/register')
                 .send({
                     ...userData,
                     email: 'invalid',
@@ -62,7 +62,7 @@ describe('UserController Integration', () => {
 
         it('should not register with weak password', async () => {
             const res = await request(server)
-                .post('/partner-app/api/users/')
+                .post('/partner-app/api/users/register')
                 .send({
                     ...userData,
                     password: 'weak',
@@ -72,7 +72,7 @@ describe('UserController Integration', () => {
 
         it('should not register with missing fields', async () => {
             const res = await request(server)
-                .post('/partner-app/api/users/')
+                .post('/partner-app/api/users/register')
                 .send({
                     email: 'test@example.com',
                     password: 'Password123!',
@@ -83,12 +83,12 @@ describe('UserController Integration', () => {
         it('should not register with duplicate email', async () => {
             // First registration
             await request(server)
-                .post('/partner-app/api/users/')
+                .post('/partner-app/api/users/register')
                 .send(userData);
 
             // Second registration with the same email
             const res = await request(server)
-                .post('/partner-app/api/users/')
+                .post('/partner-app/api/users/register')
                 .send(userData);
             expect(res.status).toBe(409);
         });
@@ -98,7 +98,7 @@ describe('UserController Integration', () => {
         it('should authenticate user and return JWT', async () => {
             // First register a user
             await request(server)
-                .post('/partner-app/api/users/')
+                .post('/partner-app/api/users/register')
                 .send(userData);
 
             // Then attempt to login
@@ -115,7 +115,7 @@ describe('UserController Integration', () => {
         it('should not authenticate with wrong password', async () => {
             // First register a user
             await request(server)
-                .post('/partner-app/api/users/')
+                .post('/partner-app/api/users/register')
                 .send(userData);
 
             // Then attempt to login with wrong password
@@ -135,6 +135,76 @@ describe('UserController Integration', () => {
                     email: 'nonexistent@example.com',
                     password: 'Password123!',
                 });
+            expect(res.status).toBe(401);
+        });
+    });
+
+    describe('PATCH /users/profile', () => {
+        let token: string;
+        beforeEach(async () => {
+            // Register and login to get JWT
+            await request(server)
+                .post('/partner-app/api/users/register')
+                .send(userData);
+            const res = await request(server)
+                .post('/partner-app/api/users/login')
+                .send({ email: userData.email, password: userData.password });
+            token = res.body.token;
+        });
+
+        it('should update the user profile', async () => {
+            const res = await request(server)
+                .patch('/partner-app/api/users/profile')
+                .set('Authorization', `Bearer ${token}`)
+                .send({ firstName: 'Updated', lastName: 'Name' });
+            expect(res.status).toBe(200);
+            expect(res.body).toHaveProperty('firstName', 'Updated');
+            expect(res.body).toHaveProperty('lastName', 'Name');
+        });
+
+        it('should not update profile with no fields', async () => {
+            const res = await request(server)
+                .patch('/partner-app/api/users/profile')
+                .set('Authorization', `Bearer ${token}`)
+                .send({});
+            expect(res.status).toBe(400);
+        });
+
+        it('should not update profile without token', async () => {
+            const res = await request(server)
+                .patch('/partner-app/api/users/profile')
+                .send({ firstName: 'NoAuth' });
+            expect(res.status).toBe(401);
+        });
+    });
+
+    describe('GET /users/profile', () => {
+        let token: string;
+        beforeEach(async () => {
+            // Register and login to get JWT
+            await request(server)
+                .post('/partner-app/api/users/register')
+                .send(userData);
+            const res = await request(server)
+                .post('/partner-app/api/users/login')
+                .send({ email: userData.email, password: userData.password });
+            token = res.body.token;
+        });
+
+        it('should retrieve the authenticated user profile', async () => {
+            const res = await request(server)
+                .get('/partner-app/api/users/profile')
+                .set('Authorization', `Bearer ${token}`);
+            expect(res.status).toBe(200);
+            expect(res.body).toHaveProperty('id');
+            expect(res.body).toHaveProperty('email', userData.email);
+            expect(res.body).not.toHaveProperty('password');
+        });
+
+        it('should not retrieve profile without token', async () => {
+            const res = await request(server).get(
+                '/partner-app/api/users/profile'
+            );
             expect(res.status).toBe(401);
         });
     });
