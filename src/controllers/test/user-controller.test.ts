@@ -1,9 +1,9 @@
 import request from 'supertest';
 import { Application } from 'express';
 import { DataSource } from 'typeorm';
-import { AppDataSource } from '../src/typeormconfig';
-import { createApp } from '../src/app';
-import { User } from '../src/entities/user';
+import { AppDataSource } from '../../typeormconfig';
+import { createApp } from '../../app';
+import { User } from '../../entities/user';
 
 let server: Application;
 let dataSource: DataSource;
@@ -136,6 +136,15 @@ describe('UserController Integration', () => {
                     password: 'Password123!',
                 });
             expect(res.status).toBe(401);
+        });
+
+        it('should not authenticate with missing fields', async () => {
+            const res = await request(server)
+                .post('/partner-app/api/users/login')
+                .send({
+                    email: userData.email,
+                });
+            expect(res.status).toBe(400);
         });
     });
 
