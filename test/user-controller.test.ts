@@ -9,6 +9,13 @@ let server: Application;
 let dataSource: DataSource;
 
 describe('UserController Integration', () => {
+    const userData = {
+        email: 'test@example.com',
+        password: 'Password123!',
+        firstName: 'Test',
+        lastName: 'User',
+    };
+
     beforeAll(async () => {
         dataSource = AppDataSource;
         if (!dataSource.isInitialized) {
@@ -36,12 +43,7 @@ describe('UserController Integration', () => {
         it('should register a new user', async () => {
             const res = await request(server)
                 .post('/partner-app/api/users/')
-                .send({
-                    email: 'test@example.com',
-                    password: 'Password123!',
-                    firstName: 'Test',
-                    lastName: 'User',
-                });
+                .send(userData);
             expect(res.status).toBe(201);
             expect(res.body).toHaveProperty('id');
             expect(res.body).toHaveProperty('email', 'test@example.com');
@@ -52,10 +54,8 @@ describe('UserController Integration', () => {
             const res = await request(server)
                 .post('/partner-app/api/users/')
                 .send({
+                    ...userData,
                     email: 'invalid',
-                    password: 'Password123!',
-                    firstName: 'Test',
-                    lastName: 'User',
                 });
             expect(res.status).toBe(400);
         });
@@ -64,10 +64,8 @@ describe('UserController Integration', () => {
             const res = await request(server)
                 .post('/partner-app/api/users/')
                 .send({
-                    email: 'test@example.com',
+                    ...userData,
                     password: 'weak',
-                    firstName: 'Test',
-                    lastName: 'User',
                 });
             expect(res.status).toBe(400);
         });
@@ -83,13 +81,6 @@ describe('UserController Integration', () => {
         });
 
         it('should not register with duplicate email', async () => {
-            const userData = {
-                email: 'test@example.com',
-                password: 'Password123!',
-                firstName: 'Test',
-                lastName: 'User',
-            };
-
             // First registration
             await request(server)
                 .post('/partner-app/api/users/')
@@ -100,6 +91,51 @@ describe('UserController Integration', () => {
                 .post('/partner-app/api/users/')
                 .send(userData);
             expect(res.status).toBe(409);
+        });
+    });
+
+    describe('POST /users/login', () => {
+        it('should authenticate user and return JWT', async () => {
+            // First register a user
+            await request(server)
+                .post('/partner-app/api/users/')
+                .send(userData);
+
+            // Then attempt to login
+            const res = await request(server)
+                .post('/partner-app/api/users/login')
+                .send({
+                    email: userData.email,
+                    password: userData.password,
+                });
+            expect(res.status).toBe(200);
+            expect(res.body).toHaveProperty('token');
+        });
+
+        it('should not authenticate with wrong password', async () => {
+            // First register a user
+            await request(server)
+                .post('/partner-app/api/users/')
+                .send(userData);
+
+            // Then attempt to login with wrong password
+            const res = await request(server)
+                .post('/partner-app/api/users/login')
+                .send({
+                    email: userData.email,
+                    password: 'WrongPassword!',
+                });
+            expect(res.status).toBe(401);
+        });
+
+        it('should not authenticate non-existent user', async () => {
+            const res = await request(server)
+                .post('/partner-app/api/users/login')
+                .send({
+                    email: 'nonexistent@example.com',
+                    password: 'Password123!',
+                });
+            expect(res.status).toBe(401);
         });
     });
 });

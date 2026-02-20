@@ -41,13 +41,40 @@ export class UserController {
             return res.status(201).json(userData);
         } catch (err: any) {
             switch (err.name) {
-            case 'EmailAlreadyInUseError':
-                return res.status(409).json({ message: err.message });
-            default:
-                return res
-                    .status(500)
-                    .json({ message: 'Internal server error' });
+                case 'EmailAlreadyInUseError':
+                    return res.status(409).json({ message: err.message });
+                default:
+                    return res
+                        .status(500)
+                        .json({ message: 'Internal server error' });
             }
+        }
+    }
+
+    /**
+     * User login
+     * POST /users/login
+     */
+    @httpPost('/login')
+    async login(@request() req: Request, @response() res: Response) {
+        try {
+            const { email, password } = req.body;
+            if (!email || !password) {
+                return res
+                    .status(400)
+                    .json({ message: 'Email and password are required' });
+            }
+
+            // Authenticate user and get JWT
+            const token = await this.userService.authenticate(email, password);
+            return res.status(200).json({ token });
+        } catch (err: any) {
+            if (err.name === 'InvalidCredentialsError') {
+                return res
+                    .status(401)
+                    .json({ message: 'Invalid email or password' });
+            }
+            return res.status(500).json({ message: 'Internal server error' });
         }
     }
 }
