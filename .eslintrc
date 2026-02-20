@@ -5,7 +5,10 @@
         "jest": true
     },
     "ignorePatterns": [],
-    "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
+    "extends": [
+        "eslint:recommended",
+        "plugin:@typescript-eslint/recommended"
+    ],
     "globals": {
         "Atomics": "readonly",
         "SharedArrayBuffer": "readonly"
@@ -14,13 +17,26 @@
     "parserOptions": {
         "ecmaVersion": 2018
     },
-    "plugins": ["@typescript-eslint", "jest"],
+    "plugins": [
+        "@typescript-eslint",
+        "jest"
+    ],
     "rules": {
         "no-inferrable-types": 0,
         "space-before-function-paren": 0,
         "semi": 0,
         "padded-blocks": 0,
-        "indent": ["error", 4],
+        "indent": [
+            "error",
+            4,
+            {
+                "ignoredNodes": [
+                    "Decorator",
+                    "PropertyDefinition[decorators]",
+                    "MethodDefinition[decorators] > Decorator"
+                ]
+            }
+        ],
         "@typescript-eslint/ban-types": 0,
         "@typescript-eslint/no-inferrable-types": 0,
         "@typescript-eslint/no-explicit-any": 0,

@@ -1,38 +1,30 @@
-import { SSMClient, GetParametersCommand } from '@aws-sdk/client-ssm';
-
 import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConnectionOptions';
 import { DataSource } from 'typeorm';
+import dotenv from 'dotenv';
+import * as entities from './entities';
+import * as migrations from './migrations';
 
-const getParametersFromSSM = async () => {
-    try {
-        const ssmClient = new SSMClient({ region: 'eu-central-1' });
+dotenv.config();
 
-        const input = {
-            Names: [
-                'k8s_rds_host',
-                'k8s_rds_db_name',
-                'k8s_rds_master_username',
-                'k8s_rds_master_password',
-            ],
-            WithDecryption: true,
-        };
-
-        const command = new GetParametersCommand(input);
-
-        const response = await ssmClient.send(command);
-
-        const envVars: any = {};
-
-        if (response.Parameters) {
-            for (const p of response.Parameters) {
-                envVars[p.Name!] = p.Value;
-            }
-        }
-
-        return envVars;
-    } catch (error: any) {
-        console.log('Failed to read parameters from SSM with error: ', error);
-    }
+const parsePort = (value: string | undefined, fallback: number) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-// Configuration for Datasource
+const dataSourceOptions: PostgresConnectionOptions = {
+    type: 'postgres',
+    host: process.env.DATABASE_HOST || 'localhost',
+    port: parsePort(process.env.DATABASE_PORT, 5432),
+    username: process.env.DATABASE_USER || 'postgres',
+    password: process.env.DATABASE_PASSWORD || '',
+    database: process.env.DATABASE_NAME || 'case_study_db',
+    entities: Object.values(entities),
+    migrations: Object.values(migrations),
+    synchronize: false,
+};
+
+export const AppDataSource = new DataSource(dataSourceOptions);
+
+export const getDataSource = async () => {
+    return AppDataSource;
+};
