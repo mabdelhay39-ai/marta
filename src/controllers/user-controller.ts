@@ -52,14 +52,11 @@ export class UserController {
                 updatedAt: user.updatedAt,
             });
         } catch (err: any) {
-            switch (err.name) {
-                case 'EmailAlreadyInUseError':
-                    return res.status(409).json({ message: err.message });
-                default:
-                    return res
-                        .status(500)
-                        .json({ message: 'Internal server error' });
+            if (err.name === 'EmailAlreadyInUseError') {
+                return res.status(409).json({ message: err.message });
             }
+            console.error('Error: during user registration', err);
+            return res.status(500).json({ message: 'Internal server error' });
         }
     }
 
@@ -89,6 +86,7 @@ export class UserController {
                     .status(401)
                     .json({ message: 'Invalid email or password' });
             }
+            console.error('Error: during user login', err);
             return res.status(500).json({ message: 'Internal server error' });
         }
     }
@@ -114,6 +112,7 @@ export class UserController {
                     .status(401)
                     .json({ message: 'Invalid or expired refresh token' });
             }
+            console.error('Error: during token refresh', err);
             return res.status(500).json({ message: 'Internal server error' });
         }
     }
@@ -149,6 +148,7 @@ export class UserController {
                 updatedAt: updated.updatedAt,
             });
         } catch (err) {
+            console.error('Error: during profile update', err);
             return res.status(500).json({ message: 'Internal server error' });
         }
     }
@@ -173,6 +173,7 @@ export class UserController {
                 updatedAt: user.updatedAt,
             });
         } catch (err) {
+            console.error('Error: during get profile', err);
             return res.status(500).json({ message: 'Internal server error' });
         }
     }
