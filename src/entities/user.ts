@@ -23,6 +23,9 @@ export class User {
     @Column()
         lastName: string;
 
+    @Column({ nullable: true })
+        refreshToken?: string;
+
     @CreateDateColumn({ type: 'timestamp with time zone' })
         createdAt: Date;
 

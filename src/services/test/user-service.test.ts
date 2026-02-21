@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { UserServiceImpl } from '../user-service';
 import { RegisterUserDto, UpdateProfileDto } from '../../lib/user-dtos';
+import * as jwtUtils from '../../lib/jwt';
 
 // Mocks
 const mockUserRepository = {
@@ -8,6 +9,7 @@ const mockUserRepository = {
     update: jest.fn(),
     findByEmail: jest.fn(),
     create: jest.fn(),
+    updateRefreshToken: jest.fn(),
 };
 const mockPasswordManager = {
     toHash: jest.fn(),
@@ -81,15 +83,19 @@ describe('UserService', () => {
             mockPasswordManager.compare.mockResolvedValue(true);
 
             // Patch signJwt to return a fake token
-            jest.spyOn(require('../../lib/jwt'), 'signJwt').mockReturnValue(
-                'token'
+            jest.spyOn(jwtUtils, 'signJwt').mockReturnValue('token');
+            jest.spyOn(jwtUtils, 'signRefreshToken').mockReturnValue(
+                'refreshToken'
             );
 
-            const token = await userService.authenticate(
+            const tokens = await userService.authenticate(
                 'test@test.com',
                 'pass'
             );
-            expect(token).toBe('token');
+            expect(tokens).toEqual({
+                accessToken: 'token',
+                refreshToken: 'refreshToken',
+            });
         });
 
         it('should throw if user not found', async () => {
@@ -161,6 +167,66 @@ describe('UserService', () => {
         it('should return null if no fields to update', async () => {
             const user = await userService.updateProfile('1', {});
             expect(user).toBeNull();
+        });
+    });
+
+    describe('refreshTokens', () => {
+        it('should update refresh token', async () => {
+            mockUserRepository.updateRefreshToken.mockResolvedValue({
+                affected: 1,
+            });
+            mockUserRepository.findById.mockResolvedValue({
+                id: '1',
+                email: 'test@test.com',
+                refreshToken: 'oldToken',
+            });
+            jest.spyOn(jwtUtils, 'verifyRefreshToken').mockReturnValue({
+                id: '1',
+            });
+            jest.spyOn(jwtUtils, 'signRefreshToken').mockReturnValue(
+                'newToken'
+            );
+
+            const result = await userService.refreshTokens('oldToken');
+            expect(mockUserRepository.updateRefreshToken).toHaveBeenCalledWith(
+                '1',
+                'newToken'
+            );
+            expect(result).toEqual({
+                accessToken: 'token',
+                refreshToken: 'newToken',
+            });
+        });
+
+        it('should throw if refresh token is invalid', async () => {
+            jest.spyOn(jwtUtils, 'verifyRefreshToken').mockImplementation(
+                () => {
+                    throw new Error('Invalid token');
+                }
+            );
+
+            await expect(
+                userService.refreshTokens('invalidToken')
+            ).rejects.toThrow(
+                expect.objectContaining({
+                    name: 'InvalidRefreshTokenError',
+                    message: 'Invalid or expired refresh token',
+                })
+            );
+        });
+
+        it('should throw if user not found', async () => {
+            jest.spyOn(jwtUtils, 'verifyRefreshToken').mockReturnValue({
+                id: '1',
+            });
+            mockUserRepository.findById.mockResolvedValue(null);
+
+            await expect(userService.refreshTokens('token')).rejects.toThrow(
+                expect.objectContaining({
+                    name: 'InvalidRefreshTokenError',
+                    message: 'Invalid or expired refresh token',
+                })
+            );
         });
     });
 });

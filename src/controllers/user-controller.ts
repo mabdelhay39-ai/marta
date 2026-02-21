@@ -10,7 +10,7 @@ import { inject } from 'inversify';
 import { TYPES, RegisterUserDto, UpdateProfileDto } from '../lib';
 import { UserService } from '../services/user-service';
 import { Request, Response } from 'express';
-import { authMiddleware, AuthRequest } from '../lib/auth-middleware';
+import { authMiddleware, AuthRequest } from '../middleware/auth-middleware';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 
@@ -26,7 +26,12 @@ export class UserController {
     async register(@request() req: Request, @response() res: Response) {
         try {
             // Validate input
-            const dto = plainToInstance(RegisterUserDto, req.body);
+            const dto = plainToInstance(RegisterUserDto, {
+                email: req.body.email?.trim()?.toLowerCase() || '',
+                password: req.body.password?.trim() || '',
+                firstName: req.body.firstName?.trim() || '',
+                lastName: req.body.lastName?.trim() || '',
+            });
             const errors = await validate(dto);
 
             if (errors.length > 0) {
@@ -38,10 +43,14 @@ export class UserController {
             // Call service to register user
             const user = await this.userService.register(dto);
 
-            // Do not return password
-            const { password: _, ...userData } = user;
-
-            return res.status(201).json(userData);
+            return res.status(201).json({
+                id: user.id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt,
+            });
         } catch (err: any) {
             switch (err.name) {
                 case 'EmailAlreadyInUseError':
@@ -62,20 +71,48 @@ export class UserController {
     async login(@request() req: Request, @response() res: Response) {
         try {
             const { email, password } = req.body;
-            if (!email || !password) {
+            if (!email?.trim() || !password) {
                 return res
                     .status(400)
                     .json({ message: 'Email and password are required' });
             }
 
-            // Authenticate user and get JWT
-            const token = await this.userService.authenticate(email, password);
-            return res.status(200).json({ token });
+            // Authenticate user and get tokens
+            const tokens = await this.userService.authenticate(
+                email.trim(),
+                password
+            );
+            return res.status(200).json(tokens);
         } catch (err: any) {
             if (err.name === 'InvalidCredentialsError') {
                 return res
                     .status(401)
                     .json({ message: 'Invalid email or password' });
+            }
+            return res.status(500).json({ message: 'Internal server error' });
+        }
+    }
+
+    /**
+     * Refresh access and refresh tokens
+     * POST /users/refresh
+     */
+    @httpPost('/refresh')
+    async refresh(@request() req: Request, @response() res: Response) {
+        try {
+            const { refreshToken } = req.body;
+            if (!refreshToken) {
+                return res
+                    .status(400)
+                    .json({ message: 'Refresh token required' });
+            }
+            const tokens = await this.userService.refreshTokens(refreshToken);
+            return res.status(200).json(tokens);
+        } catch (err: any) {
+            if (err.name === 'InvalidRefreshTokenError') {
+                return res
+                    .status(401)
+                    .json({ message: 'Invalid or expired refresh token' });
             }
             return res.status(500).json({ message: 'Internal server error' });
         }
@@ -102,8 +139,15 @@ export class UserController {
             if (!updated) {
                 return res.status(404).json({ message: 'User not found' });
             }
-            const { password: _, ...userData } = updated;
-            return res.status(200).json(userData);
+
+            return res.status(200).json({
+                id: updated.id,
+                email: updated.email,
+                firstName: updated.firstName,
+                lastName: updated.lastName,
+                createdAt: updated.createdAt,
+                updatedAt: updated.updatedAt,
+            });
         } catch (err) {
             return res.status(500).json({ message: 'Internal server error' });
         }
@@ -120,8 +164,14 @@ export class UserController {
             if (!user) {
                 return res.status(404).json({ message: 'User not found' });
             }
-            const { password: _, ...userData } = user;
-            return res.status(200).json(userData);
+            return res.status(200).json({
+                id: user.id,
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                createdAt: user.createdAt,
+                updatedAt: user.updatedAt,
+            });
         } catch (err) {
             return res.status(500).json({ message: 'Internal server error' });
         }

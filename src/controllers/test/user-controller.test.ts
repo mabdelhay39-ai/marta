@@ -95,7 +95,7 @@ describe('UserController Integration', () => {
     });
 
     describe('POST /users/login', () => {
-        it('should authenticate user and return JWT', async () => {
+        it('should authenticate user and return tokens', async () => {
             // First register a user
             await request(server)
                 .post('/partner-app/api/users/register')
@@ -109,7 +109,8 @@ describe('UserController Integration', () => {
                     password: userData.password,
                 });
             expect(res.status).toBe(200);
-            expect(res.body).toHaveProperty('token');
+            expect(res.body).toHaveProperty('accessToken');
+            expect(res.body).toHaveProperty('refreshToken');
         });
 
         it('should not authenticate with wrong password', async () => {
@@ -147,7 +148,46 @@ describe('UserController Integration', () => {
             expect(res.status).toBe(400);
         });
     });
+    describe('POST /users/refresh', () => {
+        let refreshToken: string;
+        beforeEach(async () => {
+            // Register and login to get refresh token
+            await request(server)
+                .post('/partner-app/api/users/register')
+                .send(userData);
+            const res = await request(server)
+                .post('/partner-app/api/users/login')
+                .send({
+                    email: userData.email,
+                    password: userData.password,
+                });
+            refreshToken = res.body.refreshToken;
+        });
 
+        it('should refresh tokens with valid refresh token', async () => {
+            const res = await request(server)
+                .post('/partner-app/api/users/refresh')
+                .send({ refreshToken });
+            expect(res.status).toBe(200);
+            expect(res.body).toHaveProperty('accessToken');
+            expect(res.body).toHaveProperty('refreshToken');
+            expect(res.body.refreshToken).not.toBe(refreshToken);
+        });
+
+        it('should not refresh with invalid refresh token', async () => {
+            const res = await request(server)
+                .post('/partner-app/api/users/refresh')
+                .send({ refreshToken: 'invalidtoken' });
+            expect(res.status).toBe(401);
+        });
+
+        it('should not refresh with missing refresh token', async () => {
+            const res = await request(server)
+                .post('/partner-app/api/users/refresh')
+                .send({});
+            expect(res.status).toBe(400);
+        });
+    });
     describe('PATCH /users/profile', () => {
         let token: string;
         beforeEach(async () => {
@@ -158,7 +198,7 @@ describe('UserController Integration', () => {
             const res = await request(server)
                 .post('/partner-app/api/users/login')
                 .send({ email: userData.email, password: userData.password });
-            token = res.body.token;
+            token = res.body.accessToken;
         });
 
         it('should update the user profile', async () => {
@@ -197,7 +237,7 @@ describe('UserController Integration', () => {
             const res = await request(server)
                 .post('/partner-app/api/users/login')
                 .send({ email: userData.email, password: userData.password });
-            token = res.body.token;
+            token = res.body.accessToken;
         });
 
         it('should retrieve the authenticated user profile', async () => {

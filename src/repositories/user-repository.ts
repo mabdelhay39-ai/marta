@@ -1,5 +1,5 @@
 import { inject, injectable } from 'inversify';
-import { Repository } from 'typeorm';
+import { Repository, UpdateResult } from 'typeorm';
 import { User } from '../entities/user';
 import { CreateUserDto, UpdateUserDto } from '../lib/user-dtos';
 import { DataSource } from 'typeorm';
@@ -10,6 +10,7 @@ export interface UserRepository {
     findById(id: string): Promise<User | null>;
     create(userData: CreateUserDto): Promise<User>;
     update(id: string, userData: UpdateUserDto): Promise<User | null>;
+    updateRefreshToken(id: string, refreshToken: string): Promise<UpdateResult>;
 }
 
 @injectable()
@@ -20,7 +21,9 @@ export class UserRepositoryImpl implements UserRepository {
     }
 
     async findByEmail(email: string): Promise<User | null> {
-        return this.repo.findOne({ where: { email } });
+        return this.repo.findOne({
+            where: { email: email.trim().toLowerCase() },
+        });
     }
 
     async findById(id: string): Promise<User | null> {
@@ -35,5 +38,12 @@ export class UserRepositoryImpl implements UserRepository {
     async update(id: string, userData: UpdateUserDto): Promise<User | null> {
         await this.repo.update(id, userData);
         return this.findById(id);
+    }
+
+    async updateRefreshToken(
+        id: string,
+        refreshToken: string
+    ): Promise<UpdateResult> {
+        return this.repo.update(id, { refreshToken });
     }
 }
