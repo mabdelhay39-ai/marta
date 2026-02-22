@@ -3,6 +3,8 @@ import { verifyJwt } from '../lib/jwt';
 
 export interface AuthRequest extends Request {
     user: { id: string; email: string };
+    body: any;
+    headers: any;
 }
 
 export function authMiddleware(

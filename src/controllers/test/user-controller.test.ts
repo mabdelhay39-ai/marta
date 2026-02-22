@@ -148,6 +148,7 @@ describe('UserController Integration', () => {
             expect(res.status).toBe(400);
         });
     });
+
     describe('POST /users/refresh', () => {
         let refreshToken: string;
         beforeEach(async () => {
@@ -188,6 +189,7 @@ describe('UserController Integration', () => {
             expect(res.status).toBe(400);
         });
     });
+    
     describe('PATCH /users/profile', () => {
         let token: string;
         beforeEach(async () => {

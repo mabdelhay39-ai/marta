@@ -1,0 +1,14 @@
+# syntax=docker/dockerfile:1
+
+FROM node:21-alpine3.18 AS builder
+WORKDIR /app
+COPY . .
+
+RUN apk add openssh && \
+  apk add git && \
+  mkdir -p -m 0600 ~/.ssh && \
+  ssh-keyscan github.com >> ~/.ssh/known_hosts
+RUN --mount=type=ssh,id=github_ssh_key yarn install
+
+EXPOSE 9000
+CMD ["yarn", "dev" ]

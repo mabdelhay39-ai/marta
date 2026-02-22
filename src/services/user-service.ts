@@ -45,8 +45,8 @@ export class UserServiceImpl implements UserService {
     ): Promise<User | null> {
         // Only allow updating firstName and lastName
         const updateData: any = {};
-        if (data.firstName) updateData.firstName = data.firstName;
-        if (data.lastName) updateData.lastName = data.lastName;
+        if (data.firstName?.trim()) updateData.firstName = data.firstName?.trim();
+        if (data.lastName?.trim()) updateData.lastName = data.lastName?.trim();
         if (Object.keys(updateData).length === 0) return null;
         return this.userRepository.update(userId, updateData);
     }
