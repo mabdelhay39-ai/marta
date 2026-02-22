@@ -5,6 +5,8 @@ import { InversifyExpressServer } from 'inversify-express-utils';
 import { getDataSource } from './typeormconfig';
 import { diContainer } from '../inversify.config';
 import { TYPES } from './lib';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJsdoc from 'swagger-jsdoc';
 
 dotenv.config();
 
@@ -20,6 +22,32 @@ export async function createApp() {
     });
     app.setConfig((app) => {
         app.use(json());
+
+        // Swagger setup
+        const swaggerOptions = {
+            definition: {
+                openapi: '3.0.0',
+                info: {
+                    title: 'User Authentication API',
+                    version: '1.0.0',
+                    description:
+                        'API documentation for User Authentication Service',
+                },
+                components: {
+                    securitySchemes: {
+                        bearerAuth: {
+                            type: 'http',
+                            scheme: 'bearer',
+                            bearerFormat: 'JWT',
+                        },
+                    },
+                },
+                security: [{ bearerAuth: [] }],
+            },
+            apis: ['./src/controllers/*.ts'],
+        };
+        const swaggerSpec = swaggerJsdoc(swaggerOptions);
+        app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
     });
 
     return app.build();

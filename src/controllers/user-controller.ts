@@ -19,8 +19,32 @@ export class UserController {
     constructor(@inject(TYPES.UserService) private userService: UserService) {}
 
     /**
-     * Register a new user
-     * POST /users/register
+     * @swagger
+     * /partner-app/api/users/register:
+     *   post:
+     *     summary: Register a new user
+     *     tags:
+     *       - Users
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               email:
+     *                 type: string
+     *               password:
+     *                 type: string
+     *               firstName:
+     *                 type: string
+     *               lastName:
+     *                 type: string
+     *     responses:
+     *       201:
+     *         description: User registered successfully
+     *       400:
+     *         description: Invalid input
      */
     @httpPost('/register')
     async register(@request() req: Request, @response() res: Response) {
@@ -61,8 +85,28 @@ export class UserController {
     }
 
     /**
-     * User login
-     * POST /users/login
+     * @swagger
+     * /partner-app/api/users/login:
+     *   post:
+     *     summary: Authenticate user and return JWT
+     *     tags:
+     *       - Users
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               email:
+     *                 type: string
+     *               password:
+     *                 type: string
+     *     responses:
+     *       200:
+     *         description: Authentication successful, returns JWT
+     *       401:
+     *         description: Invalid credentials
      */
     @httpPost('/login')
     async login(@request() req: Request, @response() res: Response) {
@@ -92,8 +136,26 @@ export class UserController {
     }
 
     /**
-     * Refresh access and refresh tokens
-     * POST /users/refresh
+     * @swagger
+     * /partner-app/api/users/refresh:
+     *   post:
+     *     summary: Refresh access and refresh tokens
+     *     tags:
+     *       - Users
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               refreshToken:
+     *                 type: string
+     *     responses:
+     *       200:
+     *         description: Tokens refreshed successfully
+     *       401:
+     *         description: Invalid or expired refresh token
      */
     @httpPost('/refresh')
     async refresh(@request() req: Request, @response() res: Response) {
@@ -118,8 +180,34 @@ export class UserController {
     }
 
     /**
-     * Update authenticated user's profile
-     * PATCH /users/profile
+     * @swagger
+     * /partner-app/api/users/profile:
+     *   patch:
+     *     summary: Update current user profile
+     *     tags:
+     *       - Users
+     *     security:
+     *       - bearerAuth: []
+     *     requestBody:
+     *       required: true
+     *       content:
+     *         application/json:
+     *           schema:
+     *             type: object
+     *             properties:
+     *               firstName:
+     *                 type: string
+     *               lastName:
+     *                 type: string
+     *     responses:
+     *       200:
+     *         description: User profile updated
+     *       400:
+     *         description: No fields to update
+     *       401:
+     *         description: Unauthorized
+     *       404:
+     *         description: User not found
      */
     @httpPatch('/profile', authMiddleware)
     async updateProfile(
@@ -154,8 +242,21 @@ export class UserController {
     }
 
     /**
-     * Get authenticated user's profile
-     * GET /users/profile
+     * @swagger
+     * /partner-app/api/users/profile:
+     *   get:
+     *     summary: Get current user profile
+     *     tags:
+     *       - Users
+     *     security:
+     *       - bearerAuth: []
+     *     responses:
+     *       200:
+     *         description: User profile returned
+     *       401:
+     *         description: Unauthorized
+     *       404:
+     *         description: User not found
      */
     @httpGet('/profile', authMiddleware)
     async getProfile(@request() req: AuthRequest, @response() res: Response) {
