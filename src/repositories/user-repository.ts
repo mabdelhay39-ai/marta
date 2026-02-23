@@ -1,5 +1,5 @@
 import { inject, injectable } from 'inversify';
-import { Repository, UpdateResult } from 'typeorm';
+import { Repository } from 'typeorm';
 import { User } from '../entities/user';
 import { CreateUserDto, UpdateUserDto } from '../lib/user-dtos';
 import { DataSource } from 'typeorm';
@@ -10,7 +10,7 @@ export interface UserRepository {
     findById(id: string): Promise<User | null>;
     create(userData: CreateUserDto): Promise<User>;
     update(id: string, userData: UpdateUserDto): Promise<User | null>;
-    updateRefreshToken(id: string, refreshToken: string): Promise<UpdateResult>;
+    updateRefreshToken(id: string, refreshToken: string): Promise<User>;
 }
 
 @injectable()
@@ -36,14 +36,19 @@ export class UserRepositoryImpl implements UserRepository {
     }
 
     async update(id: string, userData: UpdateUserDto): Promise<User | null> {
-        await this.repo.update(id, userData);
-        return this.findById(id);
+        const user = await this.repo.findOne({ where: { id } });
+        if (!user) return null;
+
+        Object.assign(user, userData);
+        await this.repo.save(user);
+        return user;
     }
 
-    async updateRefreshToken(
-        id: string,
-        refreshToken: string
-    ): Promise<UpdateResult> {
-        return this.repo.update(id, { refreshToken });
+    async updateRefreshToken(id: string, refreshToken: string): Promise<User> {
+        const user = await this.repo.findOne({ where: { id } });
+        if (!user) throw new Error('User not found');
+
+        user.refreshToken = refreshToken;
+        return this.repo.save(user);
     }
 }

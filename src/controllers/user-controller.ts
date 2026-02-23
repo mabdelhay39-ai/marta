@@ -52,7 +52,7 @@ export class UserController {
             // Validate input
             const dto = plainToInstance(RegisterUserDto, {
                 email: req.body.email?.trim()?.toLowerCase() || '',
-                password: req.body.password?.trim() || '',
+                password: req.body.password || '',
                 firstName: req.body.firstName?.trim() || '',
                 lastName: req.body.lastName?.trim() || '',
             });
